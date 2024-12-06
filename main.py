@@ -3,67 +3,75 @@ import mysql.connector
 
 # Fonction pour se connecter à la base de données
 def connect_to_database():
-    connection = mysql.connector.connect(
-        host="34.163.145.6",  # Remplacez par l'adresse IP publique de votre instance Cloud SQL
-        user="root",          # Remplacez par votre utilisateur MySQL
-        password="12345",  # Remplacez par votre mot de passe MySQL
-        database="CNC-BD"     # Remplacez par le nom de votre base de données
-    )
-    return connection
+    try:
+        connection = mysql.connector.connect(
+            host="34.163.145.6",  # Adresse IP publique de votre instance Cloud SQL
+            port=3306,            # Port par défaut pour MySQL
+            user="root",          # Utilisateur MySQL
+            password="12345",  # Remplacez par votre mot de passe MySQL
+            database="CNC-BD"     # Nom de la base de données
+        )
+        return connection
+    except mysql.connector.Error as err:
+        st.error(f"Erreur de connexion à la base de données : {err}")
+        return None
 
-# Fonction pour insérer les données dans la table
+# Fonction pour insérer un utilisateur
 def insert_user(connection, nom, prenom, gmail, password):
-    cursor = connection.cursor()
-    query = """
-    INSERT INTO utilisateurs (nom, prenom, gmail, password)
-    VALUES (%s, %s, %s, %s)
-    """
-    cursor.execute(query, (nom, prenom, gmail, password))
-    connection.commit()
-    cursor.close()
+    try:
+        cursor = connection.cursor()
+        query = """
+        INSERT INTO utilisateurs (nom, prenom, gmail, password)
+        VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(query, (nom, prenom, gmail, password))
+        connection.commit()
+        cursor.close()
+        st.success("Utilisateur ajouté avec succès !")
+    except mysql.connector.Error as err:
+        st.error(f"Erreur lors de l'insertion : {err}")
 
-# Titre de l'application
-st.title("Application d'inscription des utilisateurs")
+# Fonction pour récupérer les utilisateurs
+def fetch_users(connection):
+    try:
+        cursor = connection.cursor()
+        query = "SELECT nom, prenom, gmail FROM utilisateurs"
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+        return rows
+    except mysql.connector.Error as err:
+        st.error(f"Erreur lors de la récupération des utilisateurs : {err}")
+        return []
 
-# Formulaire pour collecter les informations de l'utilisateur
-with st.form("user_form"):
+# Interface Streamlit
+st.title("Gestion des utilisateurs")
+
+# Formulaire pour ajouter un utilisateur
+with st.form("Ajouter un utilisateur"):
     nom = st.text_input("Nom")
     prenom = st.text_input("Prénom")
     gmail = st.text_input("Email")
     password = st.text_input("Mot de passe", type="password")
-    submitted = st.form_submit_button("Soumettre")
+    submitted = st.form_submit_button("Ajouter")
 
     if submitted:
-        # Vérifier que tous les champs sont remplis
         if nom and prenom and gmail and password:
-            try:
-                # Connexion à la base de données
-                connection = connect_to_database()
-                # Insérer les données
+            connection = connect_to_database()
+            if connection:
                 insert_user(connection, nom, prenom, gmail, password)
-                st.success("Utilisateur ajouté avec succès !")
-            except Exception as e:
-                st.error(f"Erreur : {e}")
-            finally:
-                if 'connection' in locals():
-                    connection.close()
+                connection.close()
         else:
-            st.error("Tous les champs doivent être remplis.")
+            st.error("Tous les champs sont obligatoires.")
 
-# Afficher les utilisateurs existants
-st.subheader("Liste des utilisateurs existants")
-try:
-    connection = connect_to_database()
-    cursor = connection.cursor()
-    cursor.execute("SELECT nom, prenom, gmail FROM utilisateurs")
-    rows = cursor.fetchall()
-    cursor.close()
+# Afficher la liste des utilisateurs
+st.subheader("Liste des utilisateurs")
+connection = connect_to_database()
+if connection:
+    users = fetch_users(connection)
     connection.close()
 
-    # Afficher les résultats dans un tableau
-    if rows:
-        st.table(rows)
+    if users:
+        st.table(users)
     else:
         st.write("Aucun utilisateur trouvé.")
-except Exception as e:
-    st.error(f"Erreur lors de la récupération des utilisateurs : {e}")
