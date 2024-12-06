@@ -7,7 +7,7 @@ def connect_to_database():
         host="34.163.145.6",  # Remplacez par l'adresse IP publique de votre instance Cloud SQL
         user="root",          # Remplacez par votre utilisateur MySQL
         password="12345",  # Remplacez par votre mot de passe MySQL
-        database="CNC-DB"     # Remplacez par le nom de votre base de données
+        database="CNC-BD"     # Remplacez par le nom de votre base de données
     )
     return connection
 
